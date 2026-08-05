@@ -1153,6 +1153,196 @@ When a write may be authenticated using any signature from multiple signature li
 
 The *SignatureHeader* size shall always be 0. The *SignatureSize* shall always be 16 (size of *SignatureOwner* component) + 1 byte. The one byte of *SignatureData* exists only for compatibility reasons; It should be written as zero, and any value read should be ignored.
 
+.. _secure-boot-verification-result-table:
+
+Secure Boot Verification Result Table
+#####################################
+
+**Summary**
+
+The Secure Boot Verification Result Table records the outcome of image verification for every image that is evaluated against the Secure Boot signature databases (Both those that are authorized and those that are rejected). The table is added to the EFI System Configuration Table and identified by *EFI_IMAGE_SECURE_BOOT_VERIFICATION_RESULT_TABLE_GUID*.
+
+The table is a self-describing, three-tier structure: a fixed header is followed by one *EFI_IMAGE_SECURE_BOOT_VERIFICATION_RESULT* structure for each image that is evaluated. Each *EFI_IMAGE_SECURE_BOOT_VERIFICATION_RESULT* contains the overall authorization status of the image (see :ref:`image-verification-status-codes`) and zero or more *EFI_SIGNATURE_VERIFICATION_RESULT* structures, one for each signature in the image's certificate table that was evaluated. Each *EFI_SIGNATURE_VERIFICATION_RESULT* contains the verification outcome for a single signature (See :ref:`signature-verification-status-codes`).
+
+
+**Prototype**
+
+.. code-block::
+
+   typedef struct {
+     UINT32    Signature;
+     UINT32    Version;
+     UINT32    Length;
+     UINT32    NumberOfImages;
+     // EFI_IMAGE_SECURE_BOOT_VERIFICATION_RESULT    ImageVerificationResults[__];
+   } EFI_IMAGE_SECURE_BOOT_VERIFICATION_RESULT_TABLE;
+
+
+**Parameters**
+
+Signature
+  The signature of the table. It *shall* be set to *EFI_IMAGE_SECURE_BOOT_VERIFICATION_RESULT_TABLE_SIGNATURE*.
+
+Version
+  The version of the table layout.
+
+Length
+  The total size, in bytes, of the entire table, including the header and all image records that follow.
+
+NumberOfImages
+  The number of *EFI_IMAGE_SECURE_BOOT_VERIFICATION_RESULT* structures that follow the header.
+
+Images
+  *NumberOfImages* instances of *EFI_IMAGE_SECURE_BOOT_VERIFICATION_RESULT* structures.
+
+**Related Definitions**
+
+.. code-block::
+
+   #define EFI_IMAGE_SECURE_BOOT_VERIFICATION_RESULT_TABLE_SIGNATURE SIGNATURE_32('I', 'V', 'R', 'T')
+   #define EFI_IMAGE_SECURE_BOOT_VERIFICATION_RESULT_TABLE_VERSION   0x00010000
+
+   #define EFI_IMAGE_SECURE_BOOT_VERIFICATION_RESULT_TABLE_GUID \
+     { 0x00000000, 0x0000, 0x0000, \
+      { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } }
+
+**Prototype**
+
+.. code-block::
+
+   typedef struct {
+     UINT32    Length;
+     UINT32    ImageStatus;
+     UINT32    NumberOfSignatures;
+     UINT32    NameLength;
+     UINT32    DevicePathLength;
+     EFI_GUID  ImageDigestAlgorithm;
+     // CHAR16  Name[__];
+     // EFI_DEVICE_PATH_PROTOCOL  DevicePath[__];
+     // EFI_SIGNATURE_VERIFICATION_RESULT  Signatures[__];
+   } EFI_IMAGE_SECURE_BOOT_VERIFICATION_RESULT;
+
+**Parameters**
+
+Length
+  The total size, in bytes, of the entire structure, including the header and all signature records that follow.
+
+ImageStatus
+  The overall authorization status of the image. (See :ref:`image-verification-status-codes`).
+
+NumberOfSignatures
+  The number of *EFI_SIGNATURE_VERIFICATION_RESULT* structures that follow the header.
+
+NameLength
+  The length, in bytes, of the *Name* field that follows the header.
+
+DevicePathLength
+  The length, in bytes, of the *DevicePath* field that follows the header.
+
+ImageDigestAlgorithm
+  The GUID of the digest algorithm used to compute the image digest if the image was authenticated or rejected based on the digest.
+
+Name:
+  The null-terminated, user-friendly name for the image, if applicable.
+
+DevicePath
+  The device path of the image.
+
+Signatures
+  *NumberOfSignatures* instances of *EFI_SIGNATURE_VERIFICATION_RESULT* structures describing the verification outcome for each signature in the image's certificate table that was evaluated.
+
+**Related Definitions**
+
+.. code-block::
+
+   #define EFI_IMAGE_VERIFICATION_STATUS_AUTHORIZED_BY_DIGEST     0x00000001
+   #define EFI_IMAGE_VERIFICATION_STATUS_AUTHORIZED_BY_AUTHORITY  0x00000002
+
+   #define EFI_IMAGE_VERIFICATION_STATUS_REJECTED_MALFORMED     0x80000001
+   #define EFI_IMAGE_VERIFICATION_STATUS_REJECTED_BY_DIGEST     0x80000002
+   #define EFI_IMAGE_VERIFICATION_STATUS_REJECTED_NO_AUTHORITY  0x80000003
+
+.. list-table:: Image Verification Status Codes
+    :name: image-verification-status-codes
+    :class: longtable
+    :widths: auto
+    :header-rows: 1
+
+    * - Value
+      - Meaning
+    * - EFI_IMAGE_VERIFICATION_STATUS_AUTHORIZED_BY_DIGEST
+      - The image's digest was found in the **db** and the image's digest was not revoked via the **dbx**.
+    * - EFI_IMAGE_VERIFICATION_STATUS_AUTHORIZED_BY_AUTHORITY
+      - A signature in the image's certificate table chained to a trusted authority in the **db**. The trusted authority was not revoked via the **dbx**.
+    * - EFI_IMAGE_VERIFICATION_STATUS_REJECTED_BY_MALFORMED
+      - The image PE/COFF headers could not be parsed.
+    * - EFI_IMAGE_VERIFICATION_STATUS_REJECTED_BY_DIGEST
+      - The image's digest was found in the **dbx**.
+    * - EFI_IMAGE_VERIFICATION_STATUS_REJECTED_NO_AUTHORITY
+      - No signature in the image's certificate table chained to a trusted authority in the **db**. It is possible a trusted authority was found, but was revoked via the **dbx**. See :ref:`signature-verification-status-codes` for the verification outcome of each signature in the image's certificate table that was evaluated.
+    
+
+**Prototype**
+
+.. code-block::
+   typedef struct {
+     UINT32    Length;
+     UINT32    SignatureIndex;
+     UINT32    Status;
+     EFI_GUID  ThumbprintAlgorithm;
+     // UINT8  Thumbprint[__];
+   } EFI_SIGNATURE_VERIFICATION_RESULT;
+
+**Parameters**
+
+Length
+  The total size, in bytes, of the entire structure, including the header and the thumbprint that follows.
+
+SignatureIndex
+  The index of the signature in the image's certificate table that was evaluated.
+
+Status
+  The verification outcome of the signature. (See :ref:`signature-verification-status-codes`).
+
+ThumbprintAlgorithm
+  The digest algorithm of the trailing *Thumbprint,* or the zero GUID when no thumbprint is present.
+
+Thumbprint
+  The digest of the To-Be-Signed contents of the certificate that drove the decision for this signature. It is present only when a certificate from the **db** or **dbx** was used to authorize or reject the image; otherwise it is absent and **ThumbprintAlgorithm** is the zero GUID.
+
+**Related Definitions**
+
+.. code-block::
+
+   #define EFI_SIGNATURE_VERIFICATION_CERTIFICATE_AUTHORITY  0x00000001
+   #define EFI_SIGNATURE_VERIFICATION_TBS_HASH_AUTHORITY     0x00000002
+   
+   #define EFI_SIGNATURE_VERIFICATION_MALFORMED                         0x80000000
+   #define EFI_SIGNATURE_VERIFICATION_AUTHORITY_REVOKED_BY_CERTIFICATE  0x80000001
+   #define EFI_SIGNATURE_VERIFICATION_AUTHORITY_REVOKED_BY_TBS_HASH     0x80000002
+   #define EFI_SIGNATURE_VERIFICATION_REJECTED_NO_AUTHORITY             0x80000003
+
+.. list-table:: Signature Verification Status Codes
+    :name: signature-verification-status-codes
+    :class: longtable
+    :widths: auto
+    :header-rows: 1
+
+    * - Value
+      - Meaning
+    * - EFI_SIGNATURE_VERIFICATION_CERTIFICATE_AUTHORITY
+      - A certificate in the signer's chain was found in the **db** (authority) and was not revoked by the **dbx**.
+    * - EFI_SIGNATURE_VERIFICATION_TBS_HASH_AUTHORITY
+      - A To-Be-Signed hash in the **db** was derived from a certificate in the signer's chain (authority) and was not revoked by the **dbx**.
+    * - EFI_SIGNATURE_VERIFICATION_MALFORMED
+      - The payload could not be parsed or the required hash was not supported.
+    * - EFI_SIGNATURE_VERIFICATION_AUTHORITY_REVOKED_BY_CERTIFICATE
+      - An authority (trust anchor) was found in the **db** but was revoked because a certificate between the signer and the trust anchor was found in the **dbx**.
+    * - EFI_SIGNATURE_VERIFICATION_AUTHORITY_REVOKED_BY_TBS_HASH
+      - An authority (trust anchor) was found in the **db** but was revoked because a To-Be-Signed hash derived from a certificate between the signer and the trust anchor was found in the **dbx**.
+    * - EFI_SIGNATURE_VERIFICATION_REJECTED_NO_AUTHORITY
+      - No certificate or To-Be-Signed hash derived from a certificate in the signer's chain was found in the **db** (trust anchor).
+
 
 .. _image-execution-information-table:
 
@@ -1303,7 +1493,7 @@ The mechanism described here requires that the platform firmware maintain a sign
 
 It also requires that the platform firmware maintain a signature database with entries for each forbidden UEFI image. This signature database is also a single UEFI variable. 
 
-The signature database is checked when the UEFI Boot Manager is about to start a UEFI image. If the UEFI image’s signature is not found in the authorized database, or is found in the forbidden database, the UEFI image will be deferred and information placed in the Image Execution Information Table. In the case of OS Loaders, the next boot option will be selected. The signature databases may be updated by the firmware, by a pre-OS application or by an OS application or driver. 
+The signature database is checked when the UEFI Boot Manager is about to start a UEFI image. If the UEFI image’s signature is not found in the authorized database, or is found in the forbidden database, the UEFI image will be deferred and information placed in the Secure Boot Verification Result Table. In the case of OS Loaders, the next boot option will be selected. The signature databases may be updated by the firmware, by a pre-OS application or by an OS application or driver. 
 
 If a firmware supports the *EFI_CERT_X509_SHA*_GUID* signature types, it should support the RFC3161 timestamp specification. Images whose signature matches one of these types in the forbidden signature database shall only be considered forbidden if the firmware either does not support timestamp verification, or the signature type has a time of revocation equal to zero, or the timestamp does not pass verification against the authorized timestamp and forbidden signature databases, or finally the signature type's time of revocation is less than or equal to the time recorded in the image signature's timestamp. If the timestamp's signature is authorized by the authorized timestamp database and the time recorded in the timestamp is less than the time of revocation, the image shall not be considered forbidden provided it is not forbidden by any other entry in the forbidden signature database. Finally, this requires that firmware supporting timestamp verification must support the authorized timestamp database and have a suitable time stamping authority certificate in that database. 
 

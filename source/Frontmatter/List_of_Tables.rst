@@ -334,6 +334,8 @@
 - :numref:`chap-authentication-node-structure-using-local-database` :ref:`chap-authentication-node-structure-using-local-database`
 - :numref:`pe-coff-certificates-types-and-uefi-signature-database-certificate-types` :ref:`pe-coff-certificates-types-and-uefi-signature-database-certificate-types`
 - :numref:`authentication-attempt-status-codes` :ref:`authentication-attempt-status-codes`
+- :numref:`image-verification-status-codes` :ref:`image-verification-status-codes`
+- :numref:`signature-verification-status-codes` :ref:`signature-verification-status-codes`	
 
 **Chapter 33**
 
