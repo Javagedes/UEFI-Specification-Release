@@ -1203,8 +1203,8 @@ Images
    #define EFI_IMAGE_SECURE_BOOT_VERIFICATION_RESULT_TABLE_VERSION   0x00010000
 
    #define EFI_IMAGE_SECURE_BOOT_VERIFICATION_RESULT_TABLE_GUID \
-     { 0x00000000, 0x0000, 0x0000, \
-      { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } }
+     { 0x5ee66bd4, 0x895d, 0x421d, \
+      { 0x80, 0x05, 0x3a, 0x0c, 0x6b, 0x55, 0x18, 0xa1 } }
 
 **Prototype**
 
@@ -1240,7 +1240,7 @@ DevicePathLength
   The length, in bytes, of the *DevicePath* field that follows the header.
 
 ImageDigestAlgorithm
-  The GUID of the digest algorithm used to compute the image digest if the image was authenticated or rejected based on the digest.
+  The GUID of the digest algorithm used to compute the image digest when the image was authorized or rejected based on its digest; otherwise the zero GUID. See :ref:`pe-coff-certificates-types-and-uefi-signature-database-certificate-types` for the supported EFI_CERT_\*_GUID hash types.
 
 Name:
   The null-terminated, user-friendly name for the image, if applicable.
@@ -1274,7 +1274,7 @@ Signatures
       - The image's digest was found in the **db** and the image's digest was not revoked via the **dbx**.
     * - EFI_IMAGE_VERIFICATION_STATUS_AUTHORIZED_BY_AUTHORITY
       - A signature in the image's certificate table chained to a trusted authority in the **db**. The trusted authority was not revoked via the **dbx**.
-    * - EFI_IMAGE_VERIFICATION_STATUS_REJECTED_BY_MALFORMED
+    * - EFI_IMAGE_VERIFICATION_STATUS_REJECTED_MALFORMED
       - The image PE/COFF headers could not be parsed.
     * - EFI_IMAGE_VERIFICATION_STATUS_REJECTED_BY_DIGEST
       - The image's digest was found in the **dbx**.
@@ -1305,7 +1305,7 @@ Status
   The verification outcome of the signature. (See :ref:`signature-verification-status-codes`).
 
 ThumbprintAlgorithm
-  The digest algorithm of the trailing *Thumbprint,* or the zero GUID when no thumbprint is present.
+  The hash algorithm GUID used to generate the trailing *Thumbprint,* or the zero GUID when no thumbprint is present. See :ref:`pe-coff-certificates-types-and-uefi-signature-database-certificate-types` for the supported EFI_CERT_\*_GUID hash types. As the *Thumbprint* is a bare digest, this is the plain hash GUID (e.g. *EFI_CERT_SHA256_GUID*), not the EFI_CERT_X509_\*_GUID revocation type.
 
 Thumbprint
   The digest of the To-Be-Signed contents of the certificate that drove the decision for this signature. It is present only when a certificate from the **db** or **dbx** was used to authorize or reject the image; otherwise it is absent and **ThumbprintAlgorithm** is the zero GUID.
