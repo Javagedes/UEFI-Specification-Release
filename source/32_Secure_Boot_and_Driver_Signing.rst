@@ -1164,6 +1164,8 @@ The Secure Boot Verification Result Table records the outcome of image verificat
 
 The table is a self-describing, three-tier structure: a fixed header is followed by one *EFI_IMAGE_SECURE_BOOT_VERIFICATION_RESULT* structure for each image that is evaluated. Each *EFI_IMAGE_SECURE_BOOT_VERIFICATION_RESULT* contains the overall authorization status of the image (see :ref:`image-verification-status-codes`) and zero or more *EFI_SIGNATURE_VERIFICATION_RESULT* structures, one for each signature in the image's certificate table that was evaluated. Each *EFI_SIGNATURE_VERIFICATION_RESULT* contains the verification outcome for a single signature (See :ref:`signature-verification-status-codes`).
 
+Every structure in the table — the header, each *EFI_IMAGE_SECURE_BOOT_VERIFICATION_RESULT*, and each *EFI_SIGNATURE_VERIFICATION_RESULT* — begins on an 8-byte boundary. The table *shall* be allocated on an 8-byte boundary, and each structure's *Length* *shall* be padded up to a multiple of 8 bytes with any padding bytes set to zero.
+
 
 **Prototype**
 
@@ -1216,16 +1218,18 @@ Images
      UINT32    NumberOfSignatures;
      UINT32    NameLength;
      UINT32    DevicePathLength;
+     UINT32    Reserved;
      EFI_GUID  ImageDigestAlgorithm;
      // CHAR16  Name[__];
      // EFI_DEVICE_PATH_PROTOCOL  DevicePath[__];
+     // UINT8  Padding[__];
      // EFI_SIGNATURE_VERIFICATION_RESULT  Signatures[__];
    } EFI_IMAGE_SECURE_BOOT_VERIFICATION_RESULT;
 
 **Parameters**
 
 Length
-  The total size, in bytes, of the entire structure, including the header and all signature records that follow.
+  The total size, in bytes, of the entire structure, including the header, the *Name*, the *DevicePath*, any padding, and all signature records that follow. It is always a multiple of 8.
 
 ImageStatus
   The overall authorization status of the image. (See :ref:`image-verification-status-codes`).
@@ -1239,6 +1243,9 @@ NameLength
 DevicePathLength
   The length, in bytes, of the *DevicePath* field that follows the header.
 
+Reserved
+  Reserved for future use. It *shall* be set to zero. This field pads the header to an 8-byte boundary.
+
 ImageDigestAlgorithm
   The GUID of the digest algorithm used to compute the image digest when the image was authorized or rejected based on its digest; otherwise the zero GUID. See :ref:`pe-coff-certificates-types-and-uefi-signature-database-certificate-types` for the supported EFI_CERT_\*_GUID hash types.
 
@@ -1249,7 +1256,7 @@ DevicePath
   The device path of the image.
 
 Signatures
-  *NumberOfSignatures* instances of *EFI_SIGNATURE_VERIFICATION_RESULT* structures describing the verification outcome for each signature in the image's certificate table that was evaluated.
+  *NumberOfSignatures* instances of *EFI_SIGNATURE_VERIFICATION_RESULT* structures describing the verification outcome for each signature in the image's certificate table that was evaluated. The *Signatures* array begins at the next 8-byte boundary at or after the end of *DevicePath*.
 
 **Related Definitions**
 
@@ -1285,24 +1292,30 @@ Signatures
 **Prototype**
 
 .. code-block::
+
    typedef struct {
      UINT32    Length;
      UINT32    SignatureIndex;
      UINT32    Status;
+     UINT32    ThumbprintSize;
      EFI_GUID  ThumbprintAlgorithm;
      // UINT8  Thumbprint[__];
+     // UINT8  Padding[__];
    } EFI_SIGNATURE_VERIFICATION_RESULT;
 
 **Parameters**
 
 Length
-  The total size, in bytes, of the entire structure, including the header and the thumbprint that follows.
+  The total size, in bytes, of the entire structure, including the header, the trailing thumbprint, and any padding. It is always a multiple of 8.
 
 SignatureIndex
   The index of the signature in the image's certificate table that was evaluated.
 
 Status
   The verification outcome of the signature. (See :ref:`signature-verification-status-codes`).
+
+ThumbprintSize
+  The size, in bytes, of the trailing *Thumbprint*, or zero when no thumbprint is present.
 
 ThumbprintAlgorithm
   The hash algorithm GUID used to generate the trailing *Thumbprint,* or the zero GUID when no thumbprint is present. See :ref:`pe-coff-certificates-types-and-uefi-signature-database-certificate-types` for the supported EFI_CERT_\*_GUID hash types. As the *Thumbprint* is a bare digest, this is the plain hash GUID (e.g. *EFI_CERT_SHA256_GUID*), not the EFI_CERT_X509_\*_GUID revocation type.
