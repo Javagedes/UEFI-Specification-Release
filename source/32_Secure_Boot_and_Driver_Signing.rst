@@ -1265,9 +1265,9 @@ Signatures
    #define EFI_IMAGE_VERIFICATION_STATUS_AUTHORIZED_BY_DIGEST     0x00000001
    #define EFI_IMAGE_VERIFICATION_STATUS_AUTHORIZED_BY_AUTHORITY  0x00000002
 
-   #define EFI_IMAGE_VERIFICATION_STATUS_REJECTED_MALFORMED     0x80000001
-   #define EFI_IMAGE_VERIFICATION_STATUS_REJECTED_BY_DIGEST     0x80000002
-   #define EFI_IMAGE_VERIFICATION_STATUS_REJECTED_NO_AUTHORITY  0x80000003
+   #define EFI_IMAGE_VERIFICATION_STATUS_MALFORMED          0x80000001
+   #define EFI_IMAGE_VERIFICATION_STATUS_REVOKED_BY_DIGEST  0x80000002
+   #define EFI_IMAGE_VERIFICATION_STATUS_NO_AUTHORITY       0x80000003
 
 .. list-table:: Image Verification Status Codes
     :name: image-verification-status-codes
@@ -1281,11 +1281,11 @@ Signatures
       - The image's digest was found in the **db** and the image's digest was not revoked via the **dbx**.
     * - EFI_IMAGE_VERIFICATION_STATUS_AUTHORIZED_BY_AUTHORITY
       - A signature in the image's certificate table chained to a trusted authority in the **db**. The trusted authority was not revoked via the **dbx**.
-    * - EFI_IMAGE_VERIFICATION_STATUS_REJECTED_MALFORMED
+    * - EFI_IMAGE_VERIFICATION_STATUS_MALFORMED
       - The image PE/COFF headers could not be parsed.
-    * - EFI_IMAGE_VERIFICATION_STATUS_REJECTED_BY_DIGEST
+    * - EFI_IMAGE_VERIFICATION_STATUS_REVOKED_BY_DIGEST
       - The image's digest was found in the **dbx**.
-    * - EFI_IMAGE_VERIFICATION_STATUS_REJECTED_NO_AUTHORITY
+    * - EFI_IMAGE_VERIFICATION_STATUS_NO_AUTHORITY
       - No signature in the image's certificate table chained to a trusted authority in the **db**. It is possible a trusted authority was found, but was revoked via the **dbx**. See :ref:`signature-verification-status-codes` for the verification outcome of each signature in the image's certificate table that was evaluated.
     
 
@@ -1297,16 +1297,16 @@ Signatures
      UINT32    Length;
      UINT32    SignatureIndex;
      UINT32    Status;
-     UINT32    ThumbprintSize;
-     EFI_GUID  ThumbprintAlgorithm;
-     // UINT8  Thumbprint[__];
+     UINT32    DataSize;
+     EFI_GUID  SignatureType;
+     // UINT8  Data[__];
      // UINT8  Padding[__];
    } EFI_SIGNATURE_VERIFICATION_RESULT;
 
 **Parameters**
 
 Length
-  The total size, in bytes, of the entire structure, including the header, the trailing thumbprint, and any padding. It is always a multiple of 8.
+  The total size, in bytes, of the entire structure, including the header, the trailing *Data*, and any padding. It is always a multiple of 8.
 
 SignatureIndex
   The index of the signature in the image's certificate table that was evaluated.
@@ -1314,26 +1314,24 @@ SignatureIndex
 Status
   The verification outcome of the signature. (See :ref:`signature-verification-status-codes`).
 
-ThumbprintSize
-  The size, in bytes, of the trailing *Thumbprint*, or zero when no thumbprint is present.
+DataSize
+  The size, in bytes, of the trailing *Data*, or zero when no *Data* is present.
 
-ThumbprintAlgorithm
-  The hash algorithm GUID used to generate the trailing *Thumbprint,* or the zero GUID when no thumbprint is present. See :ref:`pe-coff-certificates-types-and-uefi-signature-database-certificate-types` for the supported EFI_CERT_\*_GUID hash types. As the *Thumbprint* is a bare digest, this is the plain hash GUID (e.g. *EFI_CERT_SHA256_GUID*), not the EFI_CERT_X509_\*_GUID revocation type.
+SignatureType
+  The *EFI_SIGNATURE_LIST* *SignatureType* of the **db** or **dbx** entry recorded in *Data*, or the zero GUID when no *Data* is present. It also identifies the layout of *Data*: a V1 signature type (for example *EFI_CERT_X509_GUID* or *EFI_CERT_SHA256_GUID*) stores an *EFI_SIGNATURE_DATA* in which a 16-byte *SignatureOwner* precedes the payload, while a V2 signature type (for example *EFI_CERT_V2_X509_GUID*) stores an *EFI_SIGNATURE_V2_DATA* with no *SignatureOwner*.
 
-Thumbprint
-  The digest of the To-Be-Signed contents of the certificate that drove the decision for this signature. It is present only when a certificate from the **db** or **dbx** was used to authorize or reject the image; otherwise it is absent and **ThumbprintAlgorithm** is the zero GUID.
+Data
+  The **db** or **dbx** signature database entry that drove the verification outcome for this signature. It is present only when a **db** or **dbx** entry applied; otherwise it is absent and *SignatureType* is the zero GUID.
 
 **Related Definitions**
 
 .. code-block::
 
-   #define EFI_SIGNATURE_VERIFICATION_CERTIFICATE_AUTHORITY  0x00000001
-   #define EFI_SIGNATURE_VERIFICATION_TBS_HASH_AUTHORITY     0x00000002
+   #define EFI_SIGNATURE_VERIFICATION_STATUS_AUTHORIZED_BY_AUTHORITY  0x00000001
    
-   #define EFI_SIGNATURE_VERIFICATION_MALFORMED                         0x80000000
-   #define EFI_SIGNATURE_VERIFICATION_AUTHORITY_REVOKED_BY_CERTIFICATE  0x80000001
-   #define EFI_SIGNATURE_VERIFICATION_AUTHORITY_REVOKED_BY_TBS_HASH     0x80000002
-   #define EFI_SIGNATURE_VERIFICATION_REJECTED_NO_AUTHORITY             0x80000003
+   #define EFI_SIGNATURE_VERIFICATION_STATUS_MALFORMED             0x80000001
+   #define EFI_SIGNATURE_VERIFICATION_STATUS_REVOKED_BY_AUTHORITY  0x80000002
+   #define EFI_SIGNATURE_VERIFICATION_STATUS_NO_AUTHORITY          0x80000003
 
 .. list-table:: Signature Verification Status Codes
     :name: signature-verification-status-codes
@@ -1343,18 +1341,14 @@ Thumbprint
 
     * - Value
       - Meaning
-    * - EFI_SIGNATURE_VERIFICATION_CERTIFICATE_AUTHORITY
-      - A certificate in the signer's chain was found in the **db** (authority) and was not revoked by the **dbx**.
-    * - EFI_SIGNATURE_VERIFICATION_TBS_HASH_AUTHORITY
-      - A To-Be-Signed hash in the **db** was derived from a certificate in the signer's chain (authority) and was not revoked by the **dbx**.
-    * - EFI_SIGNATURE_VERIFICATION_MALFORMED
+    * - EFI_SIGNATURE_VERIFICATION_STATUS_AUTHORIZED_BY_AUTHORITY
+      - A **db** entry (a certificate or a To-Be-Signed hash) in the signer's chain authorized the signature and was not revoked by the **dbx**.
+    * - EFI_SIGNATURE_VERIFICATION_STATUS_MALFORMED
       - The payload could not be parsed or the required hash was not supported.
-    * - EFI_SIGNATURE_VERIFICATION_AUTHORITY_REVOKED_BY_CERTIFICATE
-      - An authority (trust anchor) was found in the **db** but was revoked because a certificate between the signer and the trust anchor was found in the **dbx**.
-    * - EFI_SIGNATURE_VERIFICATION_AUTHORITY_REVOKED_BY_TBS_HASH
-      - An authority (trust anchor) was found in the **db** but was revoked because a To-Be-Signed hash derived from a certificate between the signer and the trust anchor was found in the **dbx**.
-    * - EFI_SIGNATURE_VERIFICATION_REJECTED_NO_AUTHORITY
-      - No certificate or To-Be-Signed hash derived from a certificate in the signer's chain was found in the **db** (trust anchor).
+    * - EFI_SIGNATURE_VERIFICATION_STATUS_REVOKED_BY_AUTHORITY
+      - A **db** authority existed, but a certificate (or its To-Be-Signed hash) between the signer and that authority was found in the **dbx**.
+    * - EFI_SIGNATURE_VERIFICATION_STATUS_NO_AUTHORITY
+      - No **db** authority was found in the signer's chain.
 
 
 .. _image-execution-information-table:
