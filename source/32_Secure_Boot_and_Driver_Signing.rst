@@ -1330,7 +1330,7 @@ Data
    #define EFI_SIGNATURE_VERIFICATION_STATUS_AUTHORIZED_BY_AUTHORITY  0x00000001
    
    #define EFI_SIGNATURE_VERIFICATION_STATUS_MALFORMED             0x80000001
-   #define EFI_SIGNATURE_VERIFICATION_STATUS_REVOKED_BY_AUTHORITY  0x80000002
+   #define EFI_SIGNATURE_VERIFICATION_STATUS_AUTHORITY_REVOKED  0x80000002
    #define EFI_SIGNATURE_VERIFICATION_STATUS_NO_AUTHORITY          0x80000003
 
 .. list-table:: Signature Verification Status Codes
@@ -1345,7 +1345,7 @@ Data
       - A **db** entry (a certificate or a To-Be-Signed hash) in the signer's chain authorized the signature and was not revoked by the **dbx**.
     * - EFI_SIGNATURE_VERIFICATION_STATUS_MALFORMED
       - The payload could not be parsed or the required hash was not supported.
-    * - EFI_SIGNATURE_VERIFICATION_STATUS_REVOKED_BY_AUTHORITY
+    * - EFI_SIGNATURE_VERIFICATION_STATUS_AUTHORITY_REVOKED
       - A **db** authority existed, but a certificate (or its To-Be-Signed hash) between the signer and that authority was found in the **dbx**.
     * - EFI_SIGNATURE_VERIFICATION_STATUS_NO_AUTHORITY
       - No **db** authority was found in the signer's chain.
