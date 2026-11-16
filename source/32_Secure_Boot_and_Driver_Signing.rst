@@ -1176,7 +1176,7 @@ Every structure in the table — the header, each *EFI_IMAGE_SECURE_BOOT_VERIFIC
      UINT32    Version;
      UINT32    Length;
      UINT32    NumberOfImages;
-     // EFI_IMAGE_SECURE_BOOT_VERIFICATION_RESULT    ImageVerificationResults[__];
+     // EFI_IMAGE_SECURE_BOOT_VERIFICATION_RESULT    Images[__];
    } EFI_IMAGE_SECURE_BOOT_VERIFICATION_RESULT_TABLE;
 
 
@@ -1201,7 +1201,7 @@ Images
 
 .. code-block::
 
-  #define EFI_IMAGE_SECURE_BOOT_VERIFICATION_RESULT_TABLE_SIGNATURE SIGNATURE_32('S', 'B', 'R', 'T')
+   #define EFI_IMAGE_SECURE_BOOT_VERIFICATION_RESULT_TABLE_SIGNATURE SIGNATURE_32 ('S', 'B', 'R', 'T')
    #define EFI_IMAGE_SECURE_BOOT_VERIFICATION_RESULT_TABLE_VERSION   0x00010000
 
    #define EFI_IMAGE_SECURE_BOOT_VERIFICATION_RESULT_TABLE_GUID \
@@ -1238,22 +1238,22 @@ NumberOfSignatures
   The number of *EFI_SIGNATURE_VERIFICATION_RESULT* structures that follow the header.
 
 NameLength
-  The length, in bytes, of the *Name* field that follows the header.
+  The length, in bytes, of the *Name* field, including its terminating null character, or zero when no name is present.
 
 DevicePathLength
-  The length, in bytes, of the *DevicePath* field that follows the header.
+  The length, in bytes, of the *DevicePath* field, including its end-of-path node. It is nonzero.
 
 Reserved
-  Reserved for future use. It *shall* be set to zero. This field pads the header to an 8-byte boundary.
+  Reserved for future use. It *shall* be set to zero. This field aligns *ImageDigestAlgorithm* on an 8-byte boundary.
 
 ImageDigestAlgorithm
-  The GUID of the digest algorithm used to compute the image digest when the image was authorized or rejected based on its digest; otherwise the zero GUID. See :ref:`pe-coff-certificates-types-and-uefi-signature-database-certificate-types` for the supported EFI_CERT_\*_GUID hash types.
+  The GUID of the digest algorithm used to compute the image digest when the image was authorized or rejected based on its digest; otherwise the zero GUID. The GUID identifies a hash algorithm, such as *EFI_HASH_ALGORITHM_SHA256_GUID*.
 
-Name:
-  The null-terminated, user-friendly name for the image, if applicable.
+Name
+  The null-terminated, user-friendly CHAR16 name for the image, if available. It immediately follows the fixed header and is absent when *NameLength* is zero.
 
 DevicePath
-  The device path of the image.
+  The self-terminating device path of the image. It immediately follows *Name*, or the fixed header when *Name* is absent.
 
 Signatures
   *NumberOfSignatures* instances of *EFI_SIGNATURE_VERIFICATION_RESULT* structures describing the verification outcome for each signature in the image's certificate table that was evaluated. The *Signatures* array begins at the next 8-byte boundary at or after the end of *DevicePath*.
@@ -1265,9 +1265,9 @@ Signatures
    #define EFI_IMAGE_VERIFICATION_STATUS_AUTHORIZED_BY_DIGEST     0x00000001
    #define EFI_IMAGE_VERIFICATION_STATUS_AUTHORIZED_BY_AUTHORITY  0x00000002
 
-   #define EFI_IMAGE_VERIFICATION_STATUS_MALFORMED          0x80000001
-   #define EFI_IMAGE_VERIFICATION_STATUS_REVOKED_BY_DIGEST  0x80000002
-   #define EFI_IMAGE_VERIFICATION_STATUS_NO_AUTHORITY       0x80000003
+   #define EFI_IMAGE_VERIFICATION_STATUS_REJECTED_MALFORMED     0x80000001
+   #define EFI_IMAGE_VERIFICATION_STATUS_REJECTED_BY_DIGEST     0x80000002
+   #define EFI_IMAGE_VERIFICATION_STATUS_REJECTED_NO_AUTHORITY  0x80000003
 
 .. list-table:: Image Verification Status Codes
     :name: image-verification-status-codes
@@ -1281,11 +1281,11 @@ Signatures
       - The image's digest was found in the **db** and the image's digest was not revoked via the **dbx**.
     * - EFI_IMAGE_VERIFICATION_STATUS_AUTHORIZED_BY_AUTHORITY
       - A signature in the image's certificate table chained to a trusted authority in the **db**. The trusted authority was not revoked via the **dbx**.
-    * - EFI_IMAGE_VERIFICATION_STATUS_MALFORMED
+    * - EFI_IMAGE_VERIFICATION_STATUS_REJECTED_MALFORMED
       - The image PE/COFF headers could not be parsed.
-    * - EFI_IMAGE_VERIFICATION_STATUS_REVOKED_BY_DIGEST
+    * - EFI_IMAGE_VERIFICATION_STATUS_REJECTED_BY_DIGEST
       - The image's digest was found in the **dbx**.
-    * - EFI_IMAGE_VERIFICATION_STATUS_NO_AUTHORITY
+    * - EFI_IMAGE_VERIFICATION_STATUS_REJECTED_NO_AUTHORITY
       - No signature in the image's certificate table chained to a trusted authority in the **db**. It is possible a trusted authority was found, but was revoked via the **dbx**. See :ref:`signature-verification-status-codes` for the verification outcome of each signature in the image's certificate table that was evaluated.
     
 
@@ -1297,41 +1297,49 @@ Signatures
      UINT32    Length;
      UINT32    SignatureIndex;
      UINT32    Status;
-     UINT32    DataSize;
-     EFI_GUID  SignatureType;
-     // UINT8  Data[__];
+     UINT32    ThumbprintSize;
+     EFI_GUID  ThumbprintAlgorithm;
+     // UINT8  Thumbprint[__];
      // UINT8  Padding[__];
    } EFI_SIGNATURE_VERIFICATION_RESULT;
 
 **Parameters**
 
 Length
-  The total size, in bytes, of the entire structure, including the header, the trailing *Data*, and any padding. It is always a multiple of 8.
+  The total size, in bytes, of the entire structure, including the header, the trailing *Thumbprint*, and any padding. It is always a multiple of 8.
 
 SignatureIndex
-  The index of the signature in the image's certificate table that was evaluated.
+  The zero-based index of the evaluated WIN_CERTIFICATE in the image's certificate table.
 
 Status
   The verification outcome of the signature. (See :ref:`signature-verification-status-codes`).
 
-DataSize
-  The size, in bytes, of the trailing *Data*, or zero when no *Data* is present.
+ThumbprintSize
+  The size, in bytes, of the trailing *Thumbprint*, or zero when no *Thumbprint* is present.
 
-SignatureType
-  The *EFI_SIGNATURE_LIST* *SignatureType* of the **db** or **dbx** entry recorded in *Data*, or the zero GUID when no *Data* is present. It also identifies the layout of *Data*: a V1 signature type (for example *EFI_CERT_X509_GUID* or *EFI_CERT_SHA256_GUID*) stores an *EFI_SIGNATURE_DATA* in which a 16-byte *SignatureOwner* precedes the payload, while a V2 signature type (for example *EFI_CERT_V2_X509_GUID*) stores an *EFI_SIGNATURE_V2_DATA* with no *SignatureOwner*.
+ThumbprintAlgorithm
+  The GUID of the digest algorithm used for *Thumbprint*, or the zero GUID when no *Thumbprint* is present.
 
-Data
-  The **db** or **dbx** signature database entry that drove the verification outcome for this signature. It is present only when a **db** or **dbx** entry applied; otherwise it is absent and *SignatureType* is the zero GUID.
+Thumbprint
+  The hash of the To-Be-Signed (TBS) data of the certificate that drove the verification outcome, when present. Its meaning depends on *Status*:
+
+  - For *EFI_SIGNATURE_VERIFICATION_CERTIFICATE_AUTHORITY*, it is the TBS hash of the certificate in the signer's chain that matched an entry in **db**.
+  - For *EFI_SIGNATURE_VERIFICATION_TBS_HASH_AUTHORITY*, it is the TBS hash found in **db** that was derived from a certificate in the signer's chain.
+  - For *EFI_SIGNATURE_VERIFICATION_AUTHORITY_REVOKED_BY_CERTIFICATE*, it is the TBS hash of the certificate between the signer and the authority that matched a certificate in **dbx**.
+  - For *EFI_SIGNATURE_VERIFICATION_AUTHORITY_REVOKED_BY_TBS_HASH*, it is the TBS hash found in **dbx** that was derived from a certificate between the signer and the authority.
+  - For *EFI_SIGNATURE_VERIFICATION_REJECTED_NO_AUTHORITY* and *EFI_SIGNATURE_VERIFICATION_MALFORMED*, no thumbprint is present and *ThumbprintAlgorithm* is the zero GUID.
 
 **Related Definitions**
 
 .. code-block::
 
-   #define EFI_SIGNATURE_VERIFICATION_STATUS_AUTHORIZED_BY_AUTHORITY  0x00000001
-   
-   #define EFI_SIGNATURE_VERIFICATION_STATUS_MALFORMED             0x80000001
-   #define EFI_SIGNATURE_VERIFICATION_STATUS_AUTHORITY_REVOKED  0x80000002
-   #define EFI_SIGNATURE_VERIFICATION_STATUS_NO_AUTHORITY          0x80000003
+   #define EFI_SIGNATURE_VERIFICATION_CERTIFICATE_AUTHORITY  0x00000001
+   #define EFI_SIGNATURE_VERIFICATION_TBS_HASH_AUTHORITY     0x00000002
+
+   #define EFI_SIGNATURE_VERIFICATION_MALFORMED                         0x80000000
+   #define EFI_SIGNATURE_VERIFICATION_AUTHORITY_REVOKED_BY_CERTIFICATE  0x80000001
+   #define EFI_SIGNATURE_VERIFICATION_AUTHORITY_REVOKED_BY_TBS_HASH     0x80000002
+   #define EFI_SIGNATURE_VERIFICATION_REJECTED_NO_AUTHORITY             0x80000003
 
 .. list-table:: Signature Verification Status Codes
     :name: signature-verification-status-codes
@@ -1341,14 +1349,18 @@ Data
 
     * - Value
       - Meaning
-    * - EFI_SIGNATURE_VERIFICATION_STATUS_AUTHORIZED_BY_AUTHORITY
-      - A **db** entry (a certificate or a To-Be-Signed hash) in the signer's chain authorized the signature and was not revoked by the **dbx**.
-    * - EFI_SIGNATURE_VERIFICATION_STATUS_MALFORMED
+    * - EFI_SIGNATURE_VERIFICATION_CERTIFICATE_AUTHORITY
+      - A certificate in the signer's chain was found in **db** and was not revoked by **dbx**.
+    * - EFI_SIGNATURE_VERIFICATION_TBS_HASH_AUTHORITY
+      - A TBS hash derived from a certificate in the signer's chain was found in **db** and was not revoked by **dbx**.
+    * - EFI_SIGNATURE_VERIFICATION_MALFORMED
       - The payload could not be parsed or the required hash was not supported.
-    * - EFI_SIGNATURE_VERIFICATION_STATUS_AUTHORITY_REVOKED
-      - A **db** authority existed, but a certificate (or its To-Be-Signed hash) between the signer and that authority was found in the **dbx**.
-    * - EFI_SIGNATURE_VERIFICATION_STATUS_NO_AUTHORITY
-      - No **db** authority was found in the signer's chain.
+    * - EFI_SIGNATURE_VERIFICATION_AUTHORITY_REVOKED_BY_CERTIFICATE
+      - A **db** authority existed, but a certificate between the signer and that authority was found in **dbx**.
+    * - EFI_SIGNATURE_VERIFICATION_AUTHORITY_REVOKED_BY_TBS_HASH
+      - A **db** authority existed, but a TBS hash derived from a certificate between the signer and that authority was found in **dbx**.
+    * - EFI_SIGNATURE_VERIFICATION_REJECTED_NO_AUTHORITY
+      - No certificate or derived TBS hash in the signer's chain matched an authority in **db**.
 
 
 .. _image-execution-information-table:
@@ -1781,4 +1793,3 @@ Constants used for UEFI device signature database variable access.
 - Firmware shall support the EFI_VARIABLE_APPEND_WRITE flag (see :ref:`variable-services`) for the UEFI device signature database variables.
 
 - The device signature database variable dbdev must be stored in tamper-resistant nonvolatile storage.
-
