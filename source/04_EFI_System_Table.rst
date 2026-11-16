@@ -931,6 +931,7 @@ The following list shows additional configuration tables defined in this specifi
 - EFI_DEBUG_IMAGE_INFO_TABLE  (:numref:`efi-image-info`)
 - EFI_SYSTEM_RESOURCE_TABLE  (:numref:`efi-system-resource-table`)
 - EFI_IMAGE_EXECUTION_INFO_TABLE  (:numref:`using-the-efi-system-configuration-table`)
+- EFI_IMAGE_SECURE_BOOT_VERIFICATION_RESULT_TABLE  (:numref:`secure-boot-verification-result-table`)
 - User Information Table  (:numref:`user-information-table`)
 - HII Database export buffer  (:numref:`os-runtime-utilization`)
 

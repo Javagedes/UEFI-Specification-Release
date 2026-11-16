@@ -3724,7 +3724,7 @@ In all cases, this function will use the instance of these protocols associated 
 
 -  In the case of EFI_LOAD_FILE2_PROTOCOL, the behavior is the same as above, except that it is only used if *BootOption* is **FALSE**. For more information, see the discussion of the EFI_LOAD_FILE2_PROTOCOL.
 
--  If the platform supports driver signing, as specified in :ref:`image-execution-information-table`  and the image signature is not valid, then information about the image is recorded in the EFI_IMAGE_EXECUTION_INFO_TABLE (see Using the Image Execution Information Table in section 32.4.2. {cross-reference needed} and EFI_SECURITY_VIOLATION is returned.
+-  If the platform supports driver signing, as specified in :ref:`image-execution-information-table`  and the image signature is not valid, then information about the image is recorded in the EFI_IMAGE_SECURE_BOOT_VERIFICATION_RESULT_TABLE (see :ref:`secure-boot-verification-result-table`) and EFI_ACCESS_DENIED is returned.
 
 -  If the platform supports user authentication, as described in :ref:`user-identification` and loading of images on the specified *FilePath* is forbidden in the current user profile, then the information about the image is recorded (see Deferred Execution in  :ref:`Image-Execution-Information-Table` and EFI_SECURITY_VIOLATION is returned.
 
